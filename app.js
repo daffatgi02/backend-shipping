@@ -1,137 +1,164 @@
 const express = require('express');
-const mysql = require('mysql');
 const cors = require('cors');
+const { Sequelize, DataTypes } = require('sequelize');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
+app.use(cors());
 
-// Extract database connection information from the URL
-const dbUrl = 'mysql://root:B95Znr7v0CiyIOhMdWa3@containers-us-west-144.railway.app:6779/railway';
-const urlParts = new URL(dbUrl);
-const dbConfig = {
-  host: urlParts.hostname,
-  port: urlParts.port,
-  user: urlParts.username,
-  password: urlParts.password,
-  database: urlParts.pathname.substr(1) // Remove the leading slash from the pathname
-};
-
-// Create a MySQL connection
-const connection = mysql.createConnection(dbConfig);
-
-// Connect to the database
-connection.connect((err) => {
-  if (err) {
-    console.error('Error connecting to the database:', err);
-    return;
-  }
-  console.log('Connected to the database');
+// Configure Sequelize
+const sequelize = new Sequelize('railway', 'root', 'B95Znr7v0CiyIOhMdWa3', {
+  host: 'containers-us-west-144.railway.app',
+  port: 6779,
+  dialect: 'mysql'
 });
 
+// Define the Package model
+const Package = sequelize.define('Package', {
+  Tgl: {
+    type: DataTypes.DATE
+  },
+  NoSP: {
+    type: DataTypes.STRING
+  },
+  Pengirim: {
+    type: DataTypes.STRING
+  },
+  Status: {
+    type: DataTypes.STRING
+  },
+  Penerima: {
+    type: DataTypes.STRING
+  },
+  Jumlah: {
+    type: DataTypes.INTEGER
+  }
+}, {
+  tableName: 'paket'
+});
+
+// Connect to the database
+sequelize.authenticate()
+  .then(() => {
+    console.log('Connected to the database');
+  })
+  .catch(err => {
+    console.error('Error connecting to the database:', err);
+  });
 
 // Get tracking data based on tracking number
 app.post('/getTrackingData', (req, res) => {
   const trackingNumber = req.body.resi;
 
-  const query = 'SELECT * FROM paket WHERE NoSP = ?';
-  connection.query(query, [trackingNumber], (err, results) => {
-    if (err) {
+  Package.findOne({
+    where: { NoSP: trackingNumber }
+  })
+    .then(result => {
+      res.json(result);
+    })
+    .catch(err => {
       console.error('Error retrieving tracking data:', err);
       res.sendStatus(500);
-      return;
-    }
-
-    res.json(results);
-  });
+    });
 });
 
 // Save new package data
 app.post('/savePaket', (req, res) => {
   const { tgl, noSp, pengirim, status, penerima, jumlah } = req.body;
 
-  const query = 'INSERT INTO paket (Tgl, NoSP, Pengirim, Status, Penerima, Jumlah) VALUES (?, ?, ?, ?, ?, ?)';
-  connection.query(query, [tgl, noSp, pengirim, status, penerima, jumlah], (err) => {
-    if (err) {
+  Package.create({
+    Tgl: tgl,
+    NoSP: noSp,
+    Pengirim: pengirim,
+    Status: status,
+    Penerima: penerima,
+    Jumlah: jumlah
+  })
+    .then(() => {
+      res.sendStatus(200);
+    })
+    .catch(err => {
       console.error('Error saving package data:', err);
       res.sendStatus(500);
-      return;
-    }
-
-    res.sendStatus(200);
-  });
+    });
 });
-
-app.get('/', (req, res) => {
-  res.send('API shipping')
-})
 
 // Get the package list
 app.get('/getPaketList', (req, res) => {
-  const query = 'SELECT * FROM paket';
-  connection.query(query, (err, results) => {
-    if (err) {
+  Package.findAll()
+    .then(results => {
+      res.json(results);
+    })
+    .catch(err => {
       console.error('Error retrieving package list:', err);
       res.sendStatus(500);
-      return;
-    }
-
-    res.json(results);
-  });
+    });
 });
 
 // Create a new package
 app.post('/createPackage', (req, res) => {
-    const { tgl, noSp, pengirim, status, penerima, jumlah } = req.body;
-  
-    const query = 'INSERT INTO paket (Tgl, NoSP, Pengirim, Status, Penerima, Jumlah) VALUES (?, ?, ?, ?, ?, ?)';
-    connection.query(query, [tgl, noSp, pengirim, status, penerima, jumlah], (err) => {
-      if (err) {
-        console.error('Error creating package:', err);
-        res.sendStatus(500);
-        return;
-      }
-  
+  const { tgl, noSp, pengirim, status, penerima, jumlah } = req.body;
+
+  Package.create({
+    Tgl: tgl,
+    NoSP: noSp,
+    Pengirim: pengirim,
+    Status: status,
+    Penerima: penerima,
+    Jumlah: jumlah
+  })
+    .then(() => {
       res.sendStatus(200);
+    })
+    .catch(err => {
+      console.error('Error creating package:', err);
+      res.sendStatus(500);
     });
-  });
+});
 
 // Update an existing package
 app.put('/updatePackage/:id', (req, res) => {
-    const { id } = req.params;
-    const { tgl, noSp, pengirim, status, penerima, jumlah } = req.body;
-  
-    const query = 'UPDATE paket SET Tgl = ?, NoSP = ?, Pengirim = ?, Status = ?, Penerima = ?, Jumlah = ? WHERE id = ?';
-    connection.query(query, [tgl, noSp, pengirim, status, penerima, jumlah, id], (err) => {
-      if (err) {
-        console.error('Error updating package:', err);
-        res.sendStatus(500);
-        return;
-      }
-  
+  const { id } = req.params;
+  const { tgl, noSp, pengirim, status, penerima, jumlah } = req.body;
+
+  Package.update({
+    Tgl: tgl,
+    NoSP: noSp,
+    Pengirim: pengirim,
+    Status: status,
+    Penerima: penerima,
+    Jumlah: jumlah
+  }, {
+    where: { id: id }
+  })
+    .then(() => {
       res.sendStatus(200);
+    })
+    .catch(err => {
+      console.error('Error updating package:', err);
+      res.sendStatus(500);
     });
-  });
+});
 
 // Delete a package
 app.delete('/deletePackage/:id', (req, res) => {
-    const { id } = req.params;
-  
-    const query = 'DELETE FROM paket WHERE id = ?';
-    connection.query(query, [id], (err) => {
-      if (err) {
-        console.error('Error deleting package:', err);
-        res.sendStatus(500);
-        return;
-      }
-  
+  const { id } = req.params;
+
+  Package.destroy({
+    where: { id: id }
+  })
+    .then(() => {
       res.sendStatus(200);
+    })
+    .catch(err => {
+      console.error('Error deleting package:', err);
+      res.sendStatus(500);
     });
-  });
+});
 
 // Start the server
-app.listen(PORT, () => console.log(`Sever is running port ${PORT} ...`));
+app.listen(PORT, () => console.log(`Server is running on port ${PORT}...`));

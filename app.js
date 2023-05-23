@@ -10,15 +10,16 @@ app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
-// MySQL Configuration
+// Extract database connection information from the URL
+const dbUrl = 'mysql://root:B95Znr7v0CiyIOhMdWa3@containers-us-west-144.railway.app:6779/railway';
+const urlParts = new URL(dbUrl);
 const dbConfig = {
-  host: 'containers-us-west-144.railway.app',
-  port: 6779, // Ganti dengan port yang sesuai
-  user: 'root',
-  password: 'B95Znr7v0CiyIOhMdWa3',
-  database: 'railway',
+  host: urlParts.hostname,
+  port: urlParts.port,
+  user: urlParts.username,
+  password: urlParts.password,
+  database: urlParts.pathname.substr(1) // Remove the leading slash from the pathname
 };
-
 
 // Create a MySQL connection
 const connection = mysql.createConnection(dbConfig);
@@ -31,6 +32,7 @@ connection.connect((err) => {
   }
   console.log('Connected to the database');
 });
+
 
 // Get tracking data based on tracking number
 app.post('/getTrackingData', (req, res) => {

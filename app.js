@@ -3,7 +3,7 @@ const mysql = require('mysql');
 const cors = require('cors');
 
 const app = express();
-const port = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
@@ -132,6 +132,4 @@ app.delete('/deletePackage/:id', (req, res) => {
   });
 
 // Start the server
-app.listen('0.0.0.0', port, () => {
-  console.log(`Server is running on port ${port}`);
-});
+app.listen(PORT, () => console.log(`Sever is running port ${PORT} ...`));
